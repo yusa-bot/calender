@@ -1,6 +1,47 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
+
+void save_schedule(int year, int month, int day, const char *event)
+{
+    FILE *file = fopen("schedule.csv", "a");
+    if (!file)
+    {
+        printf("error: 予定を保存出来ません。\n");
+        return ;
+    }
+    fprintf(file, "%d,%d,%d,%s\n", year, month, day, event);
+    fclose(file);
+    printf("予定を保存しました: %d/%d/%d - %s\n", year, month, day, event);
+}
+
+void list_schedule(int year, int month, int day)
+{
+    FILE *file = fopen("schedule.csv", "r");
+    if (!file)
+    {
+        printf("予定データがまだありません\n");
+        return ;
+    }
+
+    int y, m, d;
+    char event[100];
+    int found = 0;
+
+    while (fscanf(file, "%d,%d,%d,%99[^\n]", &y, &m, &d, event) != EOF)
+    {
+        if (y == year && m == month && (day == 0 || d == day))
+        {
+            printf("%d/%d/%d: %s\n", y, m, d, event);
+            found = 1;
+        }
+    }
+    fclose(file);
+
+    if (!found)
+        printf("指定した日付には予定はありません\n");
+}
 
 typedef struct 
 {
@@ -58,7 +99,6 @@ void print_calender(int year, int month)
     for (int day = 1; day <= days; day++)
     {
         int current_day = (start_day + day - 1) % 7;
-        char holiday_name[20] = "";
 
         if (is_holiday(month, day))
             printf("\033[31m%3d*\033[0m", day);
@@ -74,32 +114,150 @@ void print_calender(int year, int month)
     printf("\n");
 }
 
-int main(int argc, char *argv[])
+void delete_schedule(int year, int month, int day)
 {
-    int year, month;
-
-    if (argc == 3)
+    FILE *file = fopen("schedule.csv", "r");
+    if (!file)
     {
-        year = atoi(argv[1]);
-        month = atoi(argv[2]);
-        if (month < 1 || month > 12)
-        {
-            printf("error: 有効な月を入力してください\n");
-            return 1;
-        }
+        printf("予定データがありません\n");
+        return ;
     }
-    else if (argc == 1)
+    FILE *temp = fopen("temp.csv", "w");
+    if (!temp)
     {
-        time_t t = time(NULL);
-        struct tm *now = localtime(&t);
-        year = now->tm_year + 1900;
-        month = now->tm_mon + 1;
+        printf("error: 削除用ファイルを作成できません\n");
+        fclose(file);
+        return ;
+    }
+
+    int y, m, d;
+    char event[100];
+    int found = 0;
+
+    while (fscanf(file, "%d,%d,%d,%99[^\n]", &y, &m, &d, event) != EOF)
+    {
+        if (y == year && m == month && d == day)
+            found = 1;
+        else
+            fprintf(temp, "%d,%d,%d,%s\n", y, m, d, event);
+    }
+    fclose(file);
+    fclose(temp);
+
+    if (found)
+    {
+        remove("schedule.csv");
+        rename("temp.csv", "schedule.csv");
+        printf("予定を削除しました: %d/%d/%d\n", year, month, day);
     }
     else
     {
-        printf("使い方: %s 年 月\n", argv[0]);
-        return 1;
+        remove("temp.csv");
+        printf("指定した日付には予定がありません\n");
     }
-    print_calender(year, month);
-    return 0;
+}
+
+// int main(int argc, char *argv[])
+// {
+//     int year, month, day;
+
+//     if (argc >= 2) year = atoi(argv[1]);
+//     if (argc >= 3) month = atoi(argv[2]);
+//     if (argc >= 4) day = atoi(argv[3]);
+
+//     if (argc == 6 && strcmp(argv[4], "-add") == 0)
+//     {
+//         save_schedule(year, month, day, argv[5]);
+//         return 0;
+//     }
+//     else if (argc == 5 && strcmp(argv[4], "-delete") == 0)
+//     {
+//         delete_schedule(year, month, day);
+//         return 0;
+//     }
+//     else if (argc == 5 && strcmp(argv[4], "-list") == 0)
+//     {
+//         list_schedule(year, month, day);
+//         return 0;
+//     }
+//     else if (argc == 4 && strcmp(argv[3], "-list") == 0)
+//     {
+//         list_schedule(year, month, 0);
+//         return 0;
+//     }
+//     else if (argc == 3)
+//     {
+//         if (month < 1 || month > 12)
+//         {
+//             printf("error: 有効な月を入力してください\n");
+//             return 1;
+//         }
+//     }
+//     else if (argc == 1)
+//     {
+//         time_t t = time(NULL);
+//         struct tm *now = localtime(&t);
+//         year = now->tm_year + 1900;
+//         month = now->tm_mon + 1;
+//     }
+//     else
+//     {
+//         printf("使い方: %s 年 月 -add/-list \n", argv[0]);
+//         return 1;
+//     }
+//     print_calender(year, month);
+//     return 0;
+// }
+
+int main(int argc, char *argv[])
+{
+    char event[100] = "";
+    int year = 0, month = 0, day = 0;
+    int add_flag = 0, delete_flag = 0, list_flag = 0;
+
+    for (int i = 0; i < argc; i++)
+    {
+        if (strcmp(argv[i], "-a") == 0 && i + 1 < argc)
+        {
+            strcpy(event, argv[i + 1]);
+            add_flag = 1;
+            i++;
+        }
+        else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc)
+        {
+            sscanf(argv[i + 1], "%d-%d-%d", &year, &month, &day);
+            i++;
+        }
+        else if (strcmp(argv[i], "-delete") == 0)
+            delete_flag = 1;
+        else if (strcmp(argv[i], "-list") == 0)
+            list_flag = 1;
+    }
+
+    if (add_flag && year && month && day)
+    {
+        save_schedule(year, month, day, event);
+        return 0;
+    }
+    else if (delete_flag && year && month && day)
+    {
+        delete_schedule(year, month, day);
+        return 0;
+    }
+    else if (list_flag && year && month)
+    {
+        if (day)
+            list_schedule(year, month, day);
+        else
+            list_schedule(year, month, 0);
+        return 0;
+    }
+
+    printf("使い方:\n");
+    printf("  予定を追加:   ./a.out -a \"予定\" -d YYYY-MM-DD\n");
+    printf("  予定を削除:   ./a.out -d YYYY-MM-DD -delete\n");
+    printf("  予定を表示:   ./a.out -d YYYY-MM-DD -list\n");
+    printf("  月の予定表示: ./a.out -d YYYY-MM -list\n");
+    printf("オプションは順不同です！\n");
+    return 1;
 }
