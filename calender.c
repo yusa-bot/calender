@@ -157,58 +157,6 @@ void delete_schedule(int year, int month, int day)
     }
 }
 
-// int main(int argc, char *argv[])
-// {
-//     int year, month, day;
-
-//     if (argc >= 2) year = atoi(argv[1]);
-//     if (argc >= 3) month = atoi(argv[2]);
-//     if (argc >= 4) day = atoi(argv[3]);
-
-//     if (argc == 6 && strcmp(argv[4], "-add") == 0)
-//     {
-//         save_schedule(year, month, day, argv[5]);
-//         return 0;
-//     }
-//     else if (argc == 5 && strcmp(argv[4], "-delete") == 0)
-//     {
-//         delete_schedule(year, month, day);
-//         return 0;
-//     }
-//     else if (argc == 5 && strcmp(argv[4], "-list") == 0)
-//     {
-//         list_schedule(year, month, day);
-//         return 0;
-//     }
-//     else if (argc == 4 && strcmp(argv[3], "-list") == 0)
-//     {
-//         list_schedule(year, month, 0);
-//         return 0;
-//     }
-//     else if (argc == 3)
-//     {
-//         if (month < 1 || month > 12)
-//         {
-//             printf("error: 有効な月を入力してください\n");
-//             return 1;
-//         }
-//     }
-//     else if (argc == 1)
-//     {
-//         time_t t = time(NULL);
-//         struct tm *now = localtime(&t);
-//         year = now->tm_year + 1900;
-//         month = now->tm_mon + 1;
-//     }
-//     else
-//     {
-//         printf("使い方: %s 年 月 -add/-list \n", argv[0]);
-//         return 1;
-//     }
-//     print_calender(year, month);
-//     return 0;
-// }
-
 int main(int argc, char *argv[])
 {
     char event[100] = "";
@@ -217,15 +165,16 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < argc; i++)
     {
+        if (strcmp(argv[i], "-d") == 0 && i + 1 < argc)
+        {
+            sscanf(argv[i + 1], "%d-%d-%d", &year, &month, &day);
+            i++;
+        }
+
         if (strcmp(argv[i], "-a") == 0 && i + 1 < argc)
         {
             strcpy(event, argv[i + 1]);
             add_flag = 1;
-            i++;
-        }
-        else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc)
-        {
-            sscanf(argv[i + 1], "%d-%d-%d", &year, &month, &day);
             i++;
         }
         else if (strcmp(argv[i], "-delete") == 0)
@@ -250,6 +199,11 @@ int main(int argc, char *argv[])
             list_schedule(year, month, day);
         else
             list_schedule(year, month, 0);
+        return 0;
+    }
+    else
+    {
+        print_calender(year, month);
         return 0;
     }
 
